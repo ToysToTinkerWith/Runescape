@@ -2,35 +2,38 @@ import cv2 as cv
 import numpy as np
 import pyautogui
 import time
+from PIL import Image
 
-rock_img = cv.imread("color.png", cv.IMREAD_COLOR)
+def showRect(background, img, max_loc):
+	top_left = max_loc
+	bottom_right = (top_left[0] + img.shape[1], top_left[1] + img.shape[0])
+
+
+	cv.rectangle(background, top_left, bottom_right,
+		color=(0, 255, 0), thickness=2, lineType=cv.LINE_4)
+
+	cv.imshow("vision", background)
+
+	time.sleep(10)
+
+
+rock_img = cv.imread("rock.png", cv.IMREAD_COLOR)
 full_img = cv.imread("full.png", cv.IMREAD_COLOR)
 
-#Heading to Mine
-a_img = cv.imread("a.png", cv.IMREAD_COLOR)
-b_img = cv.imread("b.png", cv.IMREAD_COLOR)
-c_img = cv.imread("c.png", cv.IMREAD_COLOR)
-d_img = cv.imread("d.png", cv.IMREAD_COLOR)
-e_img = cv.imread("e.png", cv.IMREAD_COLOR)
-f_img = cv.imread("f.png", cv.IMREAD_COLOR)
-g_img = cv.imread("g.png", cv.IMREAD_COLOR)
-h_img = cv.imread("h.png", cv.IMREAD_COLOR)
 
-#Heading to Bank
-first_img = cv.imread("first.png", cv.IMREAD_COLOR)
-second_img = cv.imread("second.png", cv.IMREAD_COLOR)
-third_img = cv.imread("third.png", cv.IMREAD_COLOR)
-fourth_img = cv.imread("fourth.png", cv.IMREAD_COLOR)
-fifth_img = cv.imread("fifth.png", cv.IMREAD_COLOR)
-bank_img = cv.imread("bank.png", cv.IMREAD_COLOR)
 booth_img = cv.imread("booth.png", cv.IMREAD_COLOR)
 depo_img = cv.imread("depo.png", cv.IMREAD_COLOR)
 
+window_img = cv.imread("rswindow.png", cv.IMREAD_COLOR)
+map_img = cv.imread("map.png", cv.IMREAD_COLOR)
+
+heart_img = cv.imread("heart.png", cv.IMREAD_COLOR)
 
 
 
 action = "mining"
-step = "a"
+window_coords = (0, 0)
+minimap_coords = (0, 0)
 
 while(True):
 
@@ -45,261 +48,72 @@ while(True):
 	if(action == "mining"):
 		print(action)
 
-		if(step == "a"):
-			print(step)
+		#Locate RS Window and Minimap
 
-			result = cv.matchTemplate(game_state, a_img, cv.TM_CCOEFF_NORMED)
+		result = cv.matchTemplate(game_state, window_img, cv.TM_CCOEFF_NORMED)
+		min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+
+		threshold = 0.8
+		if max_val >= threshold:
+			window_coords = (max_loc[0]/2, max_loc[1]/2)
+			print(window_coords)
+
+			minimap_coords = (window_coords[0] + 600, window_coords[1] + 55)
+			print(minimap_coords)
+
+			minimap = pyautogui.screenshot(region=(minimap_coords[0]*2, minimap_coords[1]*2, 175, 175))
+			minimap = np.array(minimap)
+			minimap = cv.cvtColor(minimap, cv.COLOR_RGB2BGR)
+
+			cv.imwrite("minimap.png", minimap)
+
+			minimap_img = cv.imread("minimap.png", cv.IMREAD_COLOR)
+
+			#Check minimap with full map with route
+
+			result = cv.matchTemplate(map_img, minimap_img, cv.TM_CCOEFF_NORMED)
 			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+			print(max_val)
 
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "b"
-				time.sleep(5)
-			else:
-				step = "mine"
+			threshold = 0.25
+			if max_val > threshold:
 
-		elif(step == "b"):
-			print(step)
+				#Locate offset from drawn route
 
-			result = cv.matchTemplate(game_state, b_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+				routeMap = Image.open("map.png")
 
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "c"
-				time.sleep(5)
-			else:
-				step = "a"
+				route = routeMap.crop((max_loc[0], max_loc[1], 250, 250))
+				route.save("route.png")
 
-		elif(step == "c"):
-			print(step)
+				route_img = cv.imread("route.png", cv.IMREAD_COLOR)
 
-			result = cv.matchTemplate(game_state, c_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+				result = cv.matchTemplate(route_img, heart_img, cv.TM_CCOEFF_NORMED)
+				min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+				print(max_val)
 
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "d"
-				time.sleep(5)
-			else:
-				step = "b"
+				threshold = 0.7
+				if max_val >= threshold:
+					x = 0
+					y = 0
+					moveLoc = (0, 0)
+					locations = np.where(result >= threshold)
+					locations = list(zip(*locations[::-1]))
 
-		elif(step == "d"):
-			print(step)
+					for loc in locations:
 
-			result = cv.matchTemplate(game_state, d_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+						if loc[0] > x:
+							x = loc[0]
+							moveLoc = loc
 
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "e"
-				time.sleep(5)
-			else:
-				step = "c"
 
-		elif(step == "e"):
-			print(step)
+					pyautogui.moveTo(minimap_coords[0] + moveLoc[0]/2, minimap_coords[1] + moveLoc[1]/2)
 
-			result = cv.matchTemplate(game_state, e_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "f"
-				time.sleep(5)
-			else:
-				step = "d"
-
-		elif(step == "f"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, f_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "g"
-				time.sleep(5)
-			else:
-				step = "e"
-
-		elif(step == "g"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, g_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "h"
-				time.sleep(5)
-			else:
-				step = "f"
-
-		elif(step == "h"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, h_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "mine"
-				time.sleep(5)
-			else:
-				step = "g"
+					time.sleep(10)
 
 
 
-		elif(step == "mine"):
-			print(step)
 
-			result = cv.matchTemplate(game_state, rock_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2 + 10), y=(max_loc[1]/2 + 10))
-				time.sleep(1)
 		
-			else:
-				print("iron not found")
-
-			result = cv.matchTemplate(game_state, full_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				action = "banking"
-				step = "first"
-
-
-
-	elif (action == "banking"):
-		print(action)
-
-		if(step == "first"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, first_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "second"
-				time.sleep(5)
-
-		elif(step == "second"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, second_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "third"
-				time.sleep(5)
-			else:
-				step = "first"
-
-		elif(step == "third"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, third_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "fourth"
-				time.sleep(5)
-			else:
-				step = "second"
-
-		elif(step == "fourth"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, fourth_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "fifth"
-				time.sleep(5)
-			else:
-				step = "third"
-
-		elif(step == "fifth"):
-
-			result = cv.matchTemplate(game_state, fifth_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "bank"
-				time.sleep(5)
-			else:
-				step = "fourth"
-
-		elif(step == "bank"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, bank_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "booth"
-				time.sleep(5)
-			else:
-				step = "fifth"
-
-		elif(step == "booth"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, bank_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				step = "depo"
-				time.sleep(5)
-			else:
-				step = "bank"
-
-		elif(step == "depo"):
-			print(step)
-
-			result = cv.matchTemplate(game_state, bank_img, cv.TM_CCOEFF_NORMED)
-			min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-
-			threshold = 0.8
-			if max_val >= threshold:
-				pyautogui.click(x=(max_loc[0]/2), y=(max_loc[1]/2))
-				action = "mining"
-				step = "a"
-				time.sleep(5)
-			else:
-				step = "booth"
-
-
-			
-
-
 
 
 	
